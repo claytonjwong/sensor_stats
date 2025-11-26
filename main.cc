@@ -147,7 +147,7 @@ public:
      * doc string info here
      */
     void process(SensorId sid, Time start, Time end) {
-        if (end < start) {
+        if (end <= start) {
             return; // do NOT process invalid input!  TODO: error handling -- decide if we should assert, throw exception, etc.
         }
 
