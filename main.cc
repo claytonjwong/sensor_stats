@@ -285,6 +285,7 @@ int main() {
      */
     cout << "process(2, 0, 20)" << endl;
     ss.process(2, 0, 20);
+    assert(ss.total_time() == 20);
     ss.pretty_print();
 
     return 0;
