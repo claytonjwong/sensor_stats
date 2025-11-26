@@ -137,6 +137,11 @@ class SensorStats {
 public:
     using SensorId = uint32_t;
     using Time = uint64_t;
+    struct Interval {
+        Interval(Time start, Time end) : start{ start }, end{ end } {}
+        Time start = 0;
+        Time end = 0;
+    };
 
     /**
      * doc string info here
@@ -159,7 +164,7 @@ public:
             auto it = m.lower_bound(start);
             if (it != m.begin() && it != m.end()) {
                 auto [prev_start, prev_end] = *prev(it);
-                found = merge(start, end, prev_start, prev_end);
+                found = merge(Interval{start, end}, Interval{prev_start, prev_end});
                 if (found) {
                     start = min(start, prev_start);
                     end = max(end, prev_end);
@@ -173,7 +178,7 @@ public:
             auto it = m.lower_bound(start);
             if (it != m.end() && next(it) != m.end()) {
                 auto [next_start, next_end] = *next(it);
-                found = merge(start, end, next_start, next_end);
+                found = merge(Interval{start, end}, Interval{next_start, next_end});
                 if (found) {
                     start = min(start, next_start);
                     end = max(end, next_end);
@@ -206,22 +211,22 @@ private:
      *
      * note: the start times are inclusive and the end times are non-inclusive
      */
-    bool is_overlapping(Time first_start, Time first_end, Time second_start, Time second_end) const {
-        if (first_end == second_start || second_end == first_start) {
+    bool is_overlapping(Interval first, Interval second) const {
+        if (first.end == second.start || second.end == first.start) {
             return true; // corner case, adjacent intervals are NOT strictly overlapping, but they still should be merged, return true!
         }
 
         // for simplicity, subtract 1 to make endpoints inclusive, this allows us to always use <= comparisons
-        --first_end;
-        --second_end;
+        --first.end;
+        --second.end;
 
         // check if second start/end is within first start/end
-        if (first_start <= second_start && second_start <= first_end) return true;
-        if (first_start <= second_end && second_end <= first_end) return true;
+        if (first.start <= second.start && second.start <= first.end) return true;
+        if (first.start <= second.end && second.end <= first.end) return true;
 
         // check if first start/end is within second start/end
-        if (second_start <= first_start && first_start <= second_end) return true;
-        if (second_start <= first_end && first_end <= second_end) return true;
+        if (second.start <= first.start && first.start <= second.end) return true;
+        if (second.start <= first.end && first.end <= second.end) return true;
 
         // NOT overlapping
         return false;
@@ -232,15 +237,15 @@ private:
      *
      * note: the start times are inclusive and the end times are non-inclusive
      */
-    bool merge(Time first_start, Time first_end, Time second_start, Time second_end) {
+    bool merge(Interval first, Interval second) {
         // if the intervals are NOT overlapping, do NOT merge, return false immediately
-        if (!is_overlapping(first_start, first_end, second_start, second_end)) {
+        if (!is_overlapping(first, second)) {
             return false;
         }
 
         // erase the first start/end time and subtract the duration from the running total time
         {
-            auto it = m.lower_bound(first_start);
+            auto it = m.lower_bound(first.start);
             auto [start, end] = *it;
             total -= end - start;
             m.erase(it);
@@ -248,7 +253,7 @@ private:
 
         // erase the second start/end time and subtract the duration from the running total time
         {
-            auto it = m.lower_bound(second_start);
+            auto it = m.lower_bound(second.start);
             auto [start, end] = *it;
             total -= end - start;
             m.erase(it);
@@ -257,8 +262,8 @@ private:
         // insert the merged interval which is the minimum start time and maximum end time
         // and add the duration onto the running total time
         {
-            auto start = min(first_start, second_start);
-            auto end = max(first_end, second_end);
+            auto start = min(first.start, second.start);
+            auto end = max(first.end, second.end);
             total += end - start;
             m.emplace(start, end);
         }
