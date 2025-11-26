@@ -395,7 +395,7 @@ int main() {
     }
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    * test overlap on both sides, requiring multi-step overlap detection
+    * do NOT process invalid input!
     */
     {
         SensorStats ss;
