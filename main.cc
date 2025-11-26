@@ -142,6 +142,9 @@ public:
      * doc string info here
      */
     void process(SensorId sid, Time start, Time end) {
+        if (end < start) {
+            return; // do NOT process invalid input!  TODO: error handling -- decide if we should assert, throw exception, etc.
+        }
 
         // always insert into the multimap
         m.insert(make_pair(start, end));
@@ -245,115 +248,138 @@ private:
 };
 
 int main() {
-    SensorStats ss;
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *       |--|
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * original test cases
      */
-    cout << "process(0, 2, 4)" << endl;
-    ss.process(0, 2, 4);
-    assert(ss.total_time() == 2);
-    ss.pretty_print();
+    {
+        SensorStats ss;
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *       |--|
+        */
+        cout << "process(0, 2, 4)" << endl;
+        ss.process(0, 2, 4);
+        assert(ss.total_time() == 2);
+        ss.pretty_print();
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *       |-----|
-     */
-    cout << "process(1, 3, 5)" << endl;
-    ss.process(1, 3 ,5);
-    assert(ss.total_time() == 3);
-    ss.pretty_print();
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *       |-----|
+        */
+        cout << "process(1, 3, 5)" << endl;
+        ss.process(1, 3 ,5);
+        assert(ss.total_time() == 3);
+        ss.pretty_print();
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *       |-----|     |--------------|
-     */
-    cout << "process(0, 6, 12)" << endl;
-    ss.process(0, 6, 12);
-    assert(ss.total_time() == 9);
-    ss.pretty_print();
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *       |-----|     |--------------|
+        */
+        cout << "process(0, 6, 12)" << endl;
+        ss.process(0, 6, 12);
+        assert(ss.total_time() == 9);
+        ss.pretty_print();
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *       |-----|     |--------------|
-     */
-    cout << "process(1, 7, 10)" << endl;
-    ss.process(1, 7, 10);
-    assert(ss.total_time() == 9);
-    ss.pretty_print();
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *       |-----|     |--------------|
+        */
+        cout << "process(1, 7, 10)" << endl;
+        ss.process(1, 7, 10);
+        assert(ss.total_time() == 9);
+        ss.pretty_print();
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     * |--------------------------------------------------------|
-     */
-    cout << "process(2, 0, 20)" << endl;
-    ss.process(2, 0, 20);
-    assert(ss.total_time() == 20);
-    ss.pretty_print();
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        * |--------------------------------------------------------|
+        */
+        cout << "process(2, 0, 20)" << endl;
+        ss.process(2, 0, 20);
+        assert(ss.total_time() == 20);
+        ss.pretty_print();
+    }
 
-
-    /*
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
      * test adjacent intervals [0..5) and [5..10) which should be merged as [0..10)
      * even though the inverals are NOT strictly overlapping
      */
+    {
+        SensorStats ss;
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        * |-----------|
+        */
+        ss.process(0, 0, 5);
+        assert(ss.total_time() == 5);
+        ss.pretty_print();
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     * |-----------|
-     */
-    ss.process(0, 0, 5);
-    assert(ss.total_time() == 5);
-    ss.pretty_print();
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        * |--------------------------|
+        */
+        ss.process(0, 5, 10);
+        assert(ss.total_time() == 10);
+        ss.pretty_print();
+    }
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     * |--------------------------|
-     */
-    ss.process(0, 5, 10);
-    assert(ss.total_time() == 10);
-    ss.pretty_print();
 
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
      * test overlap on both sides, requiring multi-step overlap detection
      */
-
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *                |-----------|
-     *                                     |-----|
-     *                            |-----------|
-     */
-    ss.process(0, 5, 10);
-    ss.process(0, 12, 15);
-    ss.process(0, 9, 14);
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     *                |--------------------------|
-     */
-    ss.pretty_print();
-    assert(ss.total_time() == 10);
+    {
+        SensorStats ss;
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *                |-----------|
+        *                                     |-----|
+        *                            |-----------|
+        */
+        ss.process(0, 5, 10);
+        ss.process(0, 12, 15);
+        ss.process(0, 9, 14);
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        *                |--------------------------|
+        */
+        ss.pretty_print();
+        assert(ss.total_time() == 10);
+    }
 
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
      * test overlap on both sides, requiring multi-step overlap detection
      */
+    {
+        SensorStats ss;
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        * |-----------|                 |-----------|
+        *          |--------------------------|
+        */
+        ss.process(0, 0, 5);
+        ss.process(0, 10, 15);
+        ss.process(0, 3, 13);
+        /*
+        * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+        * |-----------------------------------------|
+        */
+        ss.pretty_print();
+        assert(ss.total_time() == 15);
+    }
 
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     * |-----------|                 |-----------|
-     *          |--------------------------|
-     */
-    ss.process(0, 0, 5);
-    ss.process(0, 10, 15);
-    ss.process(0, 3, 13);
-    /*
-     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
-     * |-----------------------------------------|
-     */
-    ss.pretty_print();
-    assert(ss.total_time() == 15);
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    * test overlap on both sides, requiring multi-step overlap detection
+    */
+    {
+        SensorStats ss;
+        ss.process(0, 10, 0);
+        ss.process(0, 100, 10);
+        ss.process(0, 234, 23);
+        ss.pretty_print();
+        assert(ss.total_time() == 0);
+    }
 
     return 0;
 }
