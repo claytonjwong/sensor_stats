@@ -147,10 +147,13 @@ public:
         }
 
         // always insert into the multimap
-        m.insert(make_pair(start, end));
-        bool found = false;
+        m.emplace(start, end);
+
+        // add the duration onto the running total time
+        total += end - start;
 
         // check for overlap with the element BEFORE start
+        bool found = false;
         do {
             found = false;
             auto it = m.lower_bound(start);
@@ -180,13 +183,9 @@ public:
     }
 
     /**
-     * @return Time via a linear scan of the map m
+     * @return total time in O(1) since this is a running total which is updated via the process() function
      */
     Time total_time() const {
-        Time total = 0;
-        for (auto [start, end]: m) {
-            total += end - start;
-        }
         return total;
     }
 
@@ -199,6 +198,7 @@ public:
 
 private:
     multimap<Time, Time> m;
+    Time total = 0;
 
     /**
      * return true if-and-only-if the start/end times of the first interval
@@ -238,11 +238,31 @@ private:
             return false;
         }
 
-        m.erase(m.lower_bound(first_start));   // erase the first start/end time
-        m.erase(m.lower_bound(second_start));  // erase the second start/end time
+        // erase the first start/end time and subtract the duration from the running total time
+        {
+            auto it = m.lower_bound(first_start);
+            auto [start, end] = *it;
+            total -= end - start;
+            m.erase(it);
+        }
+
+        // erase the second start/end time and subtract the duration from the running total time
+        {
+            auto it = m.lower_bound(second_start);
+            auto [start, end] = *it;
+            total -= end - start;
+            m.erase(it);
+        }
 
         // insert the merged interval which is the minimum start time and maximum end time
-        m.insert(make_pair(min(first_start, second_start), max(first_end, second_end)));
+        // and add the duration onto the running total time
+        {
+            auto start = min(first_start, second_start);
+            auto end = max(first_end, second_end);
+            total += end - start;
+            m.emplace(start, end);
+        }
+
         return true;
     }
 };
