@@ -204,6 +204,10 @@ private:
      * note: the start times are inclusive and the end times are non-inclusive
      */
     bool is_overlapping(Time first_start, Time first_end, Time second_start, Time second_end) const {
+        if (first_end == second_start || second_end == first_start) {
+            return true; // corner case, adjacent intervals are NOT strictly overlapping, but they still should be merged, return true!
+        }
+
         // for simplicity, subtract 1 to make endpoints inclusive, this allows us to always use <= comparisons
         --first_end;
         --second_end;
@@ -287,6 +291,69 @@ int main() {
     ss.process(2, 0, 20);
     assert(ss.total_time() == 20);
     ss.pretty_print();
+
+
+    /*
+     * test adjacent intervals [0..5) and [5..10) which should be merged as [0..10)
+     * even though the inverals are NOT strictly overlapping
+     */
+
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     * |-----------|
+     */
+    ss.process(0, 0, 5);
+    assert(ss.total_time() == 5);
+    ss.pretty_print();
+
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     * |--------------------------|
+     */
+    ss.process(0, 5, 10);
+    assert(ss.total_time() == 10);
+    ss.pretty_print();
+
+
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * test overlap on both sides, requiring multi-step overlap detection
+     */
+
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     *                |-----------|
+     *                                     |-----|
+     *                            |-----------|
+     */
+    ss.process(0, 5, 10);
+    ss.process(0, 12, 15);
+    ss.process(0, 9, 13);
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     *                |--------------------------|
+     */
+    ss.pretty_print();
+    assert(ss.total_time() == 10);
+
+
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * test overlap on both sides, requiring multi-step overlap detection
+     */
+
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     * |-----------|                 |-----------|
+     *          |--------------------------|
+     */
+    ss.process(0, 0, 5);
+    ss.process(0, 10, 15);
+    ss.process(0, 3, 13);
+    /*
+     * 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9  0
+     * |-----------------------------------------|
+     */
+    ss.pretty_print();
+    assert(ss.total_time() == 15);
 
     return 0;
 }
