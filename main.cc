@@ -139,8 +139,8 @@ public:
     using Time = uint64_t;
     struct Interval {
         Interval(Time start, Time end) : start{ start }, end{ end } {}
-        Time start = 0;
-        Time end = 0;
+        const Time start;
+        const Time end;
     };
 
     /**
@@ -161,9 +161,9 @@ public:
         bool found = false;
         do {
             found = false;
-            auto it = m.lower_bound(start);
+            const auto it = m.lower_bound(start);
             if (it != m.begin() && it != m.end()) {
-                auto [prev_start, prev_end] = *prev(it);
+                const auto [prev_start, prev_end] = *prev(it);
                 found = merge(Interval{start, end}, Interval{prev_start, prev_end});
                 if (found) {
                     start = min(start, prev_start);
@@ -175,9 +175,9 @@ public:
         // check for overlap with the element AFTER start
         do {
             found = false;
-            auto it = m.lower_bound(start);
+            const auto it = m.lower_bound(start);
             if (it != m.end() && next(it) != m.end()) {
-                auto [next_start, next_end] = *next(it);
+                const auto [next_start, next_end] = *next(it);
                 found = merge(Interval{start, end}, Interval{next_start, next_end});
                 if (found) {
                     start = min(start, next_start);
@@ -195,7 +195,7 @@ public:
     }
 
     void pretty_print() const {
-        for (auto [start, end]: m) {
+        for (const auto [start, end]: m) {
             cout << "[" << start << ".." << end << ")" << endl;
         }
         cout << endl;
@@ -211,14 +211,10 @@ private:
      *
      * note: the start times are inclusive and the end times are non-inclusive
      */
-    bool is_overlapping(Interval first, Interval second) const {
+    bool is_overlapping(const Interval& first, const Interval& second) const {
         if (first.end == second.start || second.end == first.start) {
             return true; // corner case, adjacent intervals are NOT strictly overlapping, but they still should be merged, return true!
         }
-
-        // for simplicity, subtract 1 to make endpoints inclusive, this allows us to always use <= comparisons
-        --first.end;
-        --second.end;
 
         // check if second start/end is within first start/end
         if (first.start <= second.start && second.start <= first.end) return true;
@@ -237,7 +233,7 @@ private:
      *
      * note: the start times are inclusive and the end times are non-inclusive
      */
-    bool merge(Interval first, Interval second) {
+    bool merge(const Interval&& first, const Interval&& second) {
         // if the intervals are NOT overlapping, do NOT merge, return false immediately
         if (!is_overlapping(first, second)) {
             return false;
@@ -245,16 +241,16 @@ private:
 
         // erase the first start/end time and subtract the duration from the running total time
         {
-            auto it = m.lower_bound(first.start);
-            auto [start, end] = *it;
+            const auto it = m.lower_bound(first.start);
+            const auto [start, end] = *it;
             total -= end - start;
             m.erase(it);
         }
 
         // erase the second start/end time and subtract the duration from the running total time
         {
-            auto it = m.lower_bound(second.start);
-            auto [start, end] = *it;
+            const auto it = m.lower_bound(second.start);
+            const auto [start, end] = *it;
             total -= end - start;
             m.erase(it);
         }
@@ -262,8 +258,8 @@ private:
         // insert the merged interval which is the minimum start time and maximum end time
         // and add the duration onto the running total time
         {
-            auto start = min(first.start, second.start);
-            auto end = max(first.end, second.end);
+            const auto start = min(first.start, second.start);
+            const auto end = max(first.end, second.end);
             total += end - start;
             m.emplace(start, end);
         }
