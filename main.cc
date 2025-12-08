@@ -212,20 +212,7 @@ private:
      * note: the start times are inclusive and the end times are non-inclusive
      */
     bool is_overlapping(const Interval& first, const Interval& second) const {
-        if (first.end == second.start || second.end == first.start) {
-            return true; // corner case, adjacent intervals are NOT strictly overlapping, but they still should be merged, return true!
-        }
-
-        // check if second start/end is within first start/end
-        if (first.start <= second.start && second.start <= first.end) return true;
-        if (first.start <= second.end && second.end <= first.end) return true;
-
-        // check if first start/end is within second start/end
-        if (second.start <= first.start && first.start <= second.end) return true;
-        if (second.start <= first.end && first.end <= second.end) return true;
-
-        // NOT overlapping
-        return false;
+        return max(first.start, second.start) <= min(first.end, second.end);
     }
 
     /**
